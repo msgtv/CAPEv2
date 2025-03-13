@@ -945,7 +945,7 @@ function install_seabios() {
     cd /tmp || return
     echo '[+] Installing SeaBios dependencies'
     aptitude install -f git acpica-tools -y
-    if [! -f "seabios_${seabios_version}.tar.gz" ]; then
+    if [ ! -f "seabios_${seabios_version}.tar.gz" ]; then
         rm "seabios_${seabios_version}"
         wget https://github.com/coreboot/seabios/archive/refs/tags/rel-${seabios_version}.tar.gz -O "seabios_${seabios_version}.tar.gz"
     fi
