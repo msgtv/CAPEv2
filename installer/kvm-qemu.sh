@@ -764,10 +764,10 @@ function replace_qemu_clues_public() {
 function replace_seabios_clues_public() {
     echo "[+] Generating SeaBios Kconfig"
     echo "[+] Fixing SeaBios antivms"
-    _sed_aux 's/Bochs/"<WOOT>/g' src/config.h 'Bochs was not replaced in src/config.h'
+    _sed_aux 's/"Bochs"/"<WOOT>"/g' src/config.h 'Bochs was not replaced in src/config.h'
     _sed_aux "s/BOCHSCPU/$bochs_cpu_replacement/g" src/config.h 'BOCHSCPU was not replaced in src/config.h'
     _sed_aux 's/"BOCHS "/"<WOOT>"/g' src/config.h 'BOCHS was not replaced in src/config.h'
-    _sed_aux 's/BXPC/"<WOOT>/g' src/config.h 'BXPC was not replaced in src/config.h'
+    _sed_aux 's/"BXPC"/"<WOOT>"/g' src/config.h 'BXPC was not replaced in src/config.h'
     _sed_aux "s/QEMU\/Bochs/$qemu_bochs_cpu/g" vgasrc/Kconfig 'QEMU\/Bochs was not replaced in vgasrc/Kconfig'
     _sed_aux "s/qemu /$qemu_space_replacement/g" vgasrc/Kconfig 'qemu was not replaced in vgasrc/Kconfig'
     _sed_aux "s/06\/23\/99/$src_misc_bios_table/g" src/misc.c 'change seabios date 1'
