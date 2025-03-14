@@ -204,6 +204,8 @@ function configure_needreboot(){
     # Ubuntu 22
     # Disabele: Daemons using outdated libraries
     # https://stackoverflow.com/questions/73397110/how-to-stop-ubuntu-pop-up-daemons-using-outdated-libraries-when-using-apt-to-i
+    aptitude install needrestart -y
+
     sed -i "/#\$nrconf{restart} = 'i';/s/.*/\$nrconf{restart} = 'a';/" /etc/needrestart/needrestart.conf
     # Disabele: Pending kernel upgrade
     # https://askubuntu.com/questions/1349884/how-to-disable-pending-kernel-upgrade-message
@@ -295,7 +297,7 @@ function install_libvmi() {
     fi
     mkdir -p /tmp/libvmi_builded/DEBIAN
     echo -e "Package: libvmi\nVersion: 1.0-0\nArchitecture: $ARCH\nMaintainer: $MAINTAINER\nDescription: libvmi" > /tmp/libvmi_builded/DEBIAN/control
-    cd "libvmi-v0.14.0" || return
+    cd "libvmi-0.14.0" || return
 
     # install deps
     aptitude install -f -y cmake flex bison libglib2.0-dev libjson-c-dev libyajl-dev doxygen
@@ -335,7 +337,7 @@ function install_libvmi() {
     cd /tmp || return
 
     if [ ! -d "rekall" ]; then
-        git clone https://github.com/google/rekall.git
+        git clone --depth 1 https://github.com/google/rekall.git
         echo "[+] Cloned Rekall repo"
     fi
 
@@ -655,7 +657,7 @@ function install_virt_manager() {
 
     cd /tmp || return
     if [ ! -d "libvirt-glib" ]; then
-        git clone https://gitlab.com/libvirt/libvirt-glib.git
+        git clone --depth 1 https://gitlab.com/libvirt/libvirt-glib.git
     fi
     cd libvirt-glib || { echo "Не удалось перейти в директорию /tmp/libvirt-glib"; exit 1; }
     meson setup builddir
@@ -670,7 +672,7 @@ function install_virt_manager() {
     /sbin/ldconfig
 
     if [ ! -d "virt-manager" ]; then
-        git clone https://github.com/virt-manager/virt-manager.git
+        git clone --depth 1 https://github.com/virt-manager/virt-manager.git
         echo "[+] Cloned Virt Manager repo"
     fi
     cd "virt-manager" || return
