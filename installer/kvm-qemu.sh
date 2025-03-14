@@ -76,8 +76,8 @@ DNS_SECONDARY="8.8.4.4"
 systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 
 #replace all occurances of CPU's in qemu with our fake one
-cpuid="Intel(R) Core(TM) i3-4130 CPU"
-#cpuid="AMD FX(tm)-4300 Quad-Core Processor"
+# cpuid="Intel(R) Core(TM) i3-4130 CPU"
+# cpuid="AMD FX(tm)-4300 Quad-Core Processor"
 
 #KVMKVMKVM\\0\\0\\0 replacement
 hypervisor_string_replacemnt="GenuineIntel"
@@ -133,6 +133,7 @@ BOCHS_BLOCK_REPLACER3='<WOOT>'
 BXPC_REPLACER='<WOOT>'
 
 # if a config file is present, read it in
+# shellcheck disable=SC1091
 if [ -f "./kvm-config.sh" ]; then
         . ./kvm-config.sh
 fi
@@ -339,6 +340,7 @@ function install_libvmi() {
     fi
 
     virtualenv /tmp/MyEnv
+    # shellcheck disable=SC1091
     source /tmp/MyEnv/bin/activate
     pip3 install --upgrade testresources setuptools pip wheel
     pip3 install capstone
@@ -453,7 +455,7 @@ EOH
     libvirt_so_path="${temp_libvirt_so_path%/*}/"
 
     if [[ -n "$libvirt_so_path" ]]; then
-        for so_path in $(ls "${libvirt_so_path}"libvirt*.so.0);  do
+        for so_path in "${libvirt_so_path}"libvirt*.so.0;  do
             dest_path=/lib/$(uname -m)-linux-gnu/$(basename "$so_path")
             if [ -f "$dest_path" ]; then
                 rm "$dest_path"
@@ -488,6 +490,7 @@ EOH
 
         sudo ninja -C build
         sudo ninja -C build install
+        # shellcheck disable=SC2181
         if  [ $? -ne 0 ]; then
             echo "${RED}Failed. Read the instalation log for details${NC}"
             exit 1
@@ -511,7 +514,9 @@ EOH
         if [[ -n "$libvirt_so_path" ]]; then
             # #ln -s /usr/lib64/libvirt-qemu.so /lib/x86_64-linux-gnu/libvirt-qemu.so.0
             # 24.10.2024 Observed problem with ln -sf, but works just fine with cp
-            for so_path in $(ls "${libvirt_so_path}"libvirt*.so.0); do echo $so_path; cp "$so_path" /lib/$(uname -m)-linux-gnu/$(basename "$so_path"); done
+            for so_path in "${libvirt_so_path}"libvirt*.so.0; do 
+                echo "$so_path"; cp "$so_path" "/lib/$(uname -m)-linux-gnu/$(basename "$so_path")"; 
+            done
             ldconfig
         else
             echo "${RED}[!] Problem to create symlink, unknown libvirt_so_path path${NC}"
@@ -523,6 +528,7 @@ EOH
     if [ -f /etc/libvirt/libvirtd.conf ]; then
         path="/etc/libvirt/libvirtd.conf"
     elif [ -f /usr/local/etc/libvirt/libvirtd.conf ]; then
+        # shellcheck disable=SC2034
         path="/usr/local/etc/libvirt/libvirtd.conf"
     fi
 
@@ -635,7 +641,7 @@ function install_virt_manager() {
     PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install tqdm requests six urllib3 ipaddr ipaddress idna dbus-python certifi lxml cryptography pyOpenSSL chardet asn1crypto pycairo PySocks PyGObject pylint pytest
 
     # not available in 22.04
-    if [ $(lsb_release -sc) != "jammy" ]; then
+    if [ "$(lsb_release -sc)" != "jammy" ]; then
         aptitude -f install python-enum34 libxenstore3.0 libnetcf1 libcroco3 libappindicator3-1 python-enum34-doc -y
     fi
 
@@ -651,7 +657,7 @@ function install_virt_manager() {
     if [ ! -d "libvirt-glib" ]; then
         git clone https://gitlab.com/libvirt/libvirt-glib.git
     fi
-    cd libvirt-glib
+    cd libvirt-glib || { echo "Не удалось перейти в директорию /tmp/libvirt-glib"; exit 1; }
     meson setup builddir
     meson compile -C builddir
     sudo ninja -C builddir install
@@ -869,6 +875,7 @@ function install_qemu() {
         sed -i 's/CONFIG_XEN=y/CONFIG_XEN=n/g' ./config.seabios-128k
         sed -i 's/PYTHON=python/PYTHON=python3/g' seabios/Makefile
         PIP_BREAK_SYSTEM_PACKAGES=1 make bios
+        # shellcheck disable=SC2181
         if [ $? -eq 0 ]; then
             echo '[+] Completed '
         else
@@ -877,12 +884,14 @@ function install_qemu() {
 
         echo '[+] Making vgabios bins...'
         PIP_BREAK_SYSTEM_PACKAGES=1 make vgabios
+        # shellcheck disable=SC2181
         if [ $? -eq 0 ]; then
             echo '[+] Completed '
         else
             echo '[-] Failed $?'
         fi
 
+        # shellcheck disable=SC2164
         cd -
 
         # ToDo reintroduce it?
@@ -893,6 +902,7 @@ function install_qemu() {
             # remove --target-list=i386-softmmu,x86_64-softmmu,i386-linux-user,x86_64-linux-user  if you want all targets
                 ./configure $QTARGETS --prefix=/usr --libexecdir=/usr/lib/qemu --localstatedir=/var --bindir=/usr/bin/ --enable-gnutls --enable-docs --enable-gtk --enable-vnc --enable-vnc-sasl --enable-curl --enable-kvm  --enable-linux-aio --enable-cap-ng --enable-vhost-net --enable-vhost-crypto --enable-spice --enable-usb-redir --enable-lzo --enable-snappy --enable-bzip2 --enable-coroutine-pool --enable-replication --enable-tools
                 #  --enable-capstone
+            # shellcheck disable=SC2181
             if  [ $? -eq 0 ]; then
                 echo '[+] Starting Install it'
                 if [ -f /usr/share/qemu/qemu_logo_no_text.svg ]; then
@@ -981,8 +991,8 @@ function install_seabios() {
             )
             for file in "${FILES[@]}"; do
                 cp -vf out/bios.bin "$file"
-                SHA256_BIOS_TMP=$(shasum -a 256 $file|awk '{print $1}')
-                if [[ $SHA256_BIOS_TMP != $SHA256_BIOS ]]; then
+                SHA256_BIOS_TMP=$(shasum -a 256 "$file" | awk '{print $1}')
+                if [[ "$SHA256_BIOS_TMP" != "$SHA256_BIOS" ]]; then
                     echo "[-] BIOS hashes doesn't match: $SHA256_BIOS - $SHA256_BIOS_TMP"
                     bios=0
                 else
