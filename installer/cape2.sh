@@ -60,12 +60,13 @@ DIE_VERSION="3.10"
 TOR_SOCKET_TIMEOUT="60"
 
 # if a config file is present, read it in
+# shellcheck disable=SC1091
 if [ -f "./cape-config.sh" ]; then
     . ./cape-config.sh
 fi
 
 UBUNTU_VERSION=$(lsb_release -rs)
-OS="$(uname -s)"
+# OS="$(uname -s)"
 MAINTAINER="$(whoami)"_"$(hostname)"
 ARCH="$(dpkg --print-architecture)"
 
@@ -138,6 +139,7 @@ function install_crowdsecurity() {
     fi
     tar xvzf crowdsec-release.tgz
     # ToDo fix this
+    # shellcheck disable=SC2010,2022
     directory=$(ls | grep "crowdsec-v*")
     cd "$directory" || return
     sudo ./wizard.sh -i
@@ -150,7 +152,7 @@ function install_crowdsecurity() {
         wget https://github.com/crowdsecurity/cs-nginx-bouncer/releases/download/v$CSNB_VERSION/crowdsec-nginx-bouncer.tgz
         tar xvzf crowdsec-nginx-bouncer.tgz
     fi
-    cd crowdsec-nginx-bouncer-v$CSNB_VERSION || return
+    cd crowdsec-nginx-bouncer-v$CSNB_VERSION || { echo "Не удалось перейти в директорию crowdsec-nginx-bouncer-v$CSNB_VERSION"; exit 1; }
     sudo ./install.sh
 }
 
@@ -169,7 +171,7 @@ function install_docker() {
 
 function install_jemalloc() {
     # https://zapier.com/engineering/celery-python-jemalloc/
-    if ! $(dpkg -l "libjemalloc*" | grep -q "ii  libjemalloc"); then
+    if ! dpkg -l "libjemalloc*" | grep -q "ii  libjemalloc"; then
         sudo apt-get install -y libjemalloc-dev
     fi
 }
@@ -235,7 +237,7 @@ function librenms_snmpd_config() {
         echo "#extend mdadm /usr/bin/env PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin /etc/snmp/extends/mdadm"
     fi
     echo
-    if [ ! -z "$snmp_agentaddress" ]; then
+    if [ -n "$snmp_agentaddress" ]; then
         echo "agentaddress $snmp_agentaddress"
     fi
 }
@@ -285,7 +287,7 @@ function install_modsecurity() {
     # Tested on nginx 1.(16|18).X Based on https://www.nginx.com/blog/compiling-and-installing-modsecurity-for-open-source-nginx/ with fixes
     sudo apt-get install -y git g++ apt-utils autoconf automake build-essential libcurl4-openssl-dev libgeoip-dev liblmdb-dev libpcre2-dev libtool libxml2-dev libyajl-dev pkgconf zlib1g-dev
     git clone --depth 500 -b v3/master --single-branch https://github.com/SpiderLabs/ModSecurity
-    cd ModSecurity || return
+    cd ModSecurity || { echo "Не удалось перейти в директорию ModSecurity"; exit 1; }
     git submodule init
     git submodule update
     ./build.sh
@@ -332,7 +334,7 @@ function install_modsecurity() {
 
 }
 
-
+# shellcheck disable=SC2120
 function install_nginx() {
     echo "[+] Install nginx"
     if [ ! -d nginx-$nginx_version ]; then
@@ -349,7 +351,7 @@ function install_nginx() {
         wget https://ftp.exim.org/pub/pcre/pcre2-$PCRE_VERSION.tar.gz  && tar xzvf pcre2-$PCRE_VERSION.tar.gz
     fi
 
-    if [ ! -d zlib-1.3.1]; then
+    if [ ! -d zlib-1.3.1 ]; then
         wget https://www.zlib.net/zlib-$ZLIB_VERSION.tar.gz && tar xzvf zlib-$ZLIB_VERSION.tar.gz
     fi
 
@@ -365,6 +367,7 @@ function install_nginx() {
     sudo cp man/nginx.8 /usr/share/man/man8
     # ToDo auto confirmation of overwrite
     sudo gzip /usr/share/man/man8/nginx.8
+    # shellcheck disable=SC2010
     ls /usr/share/man/man8/ | grep nginx.8.gz
 
     ./configure --prefix=/usr/share/nginx \
@@ -516,11 +519,11 @@ fi
 server {
     listen 80 default_server;
     server_name $1;
-    return 301 https://$host$request_uri;
+    return 301 https://\$host\$request_uri;
 }
 
 server {
-    if ($http_user_agent = "") {
+    if (\$http_user_agent = "") {
         return 444;
     }
     # SSL configuration
@@ -535,11 +538,11 @@ server {
     ssl_verify_client on;
 
     //add_header Alt-Svc 'quic=":443"'; # Advertise that QUIC is available
-    //add_header QUIC-Status $quic;     # Sent when QUIC was used
+    //add_header QUIC-Status \$quic;     # Sent when QUIC was used
 
     server_name $1 www.$1;
     location / {
-        try_files $uri $uri/ =404;
+        try_files \$uri \$uri/ =404;
     }
 }:
 EOF
@@ -586,6 +589,7 @@ EOF
 fi
 }
 
+# shellcheck disable=SC2120
 function install_letsencrypt(){
     echo "[+] Install and configure letsencrypt"
     sudo apt-get install -y python3 python3-venv libaugeas0
@@ -727,6 +731,7 @@ function install_suricata() {
     sed -i 's/    depth: 1mb/    depth: 0/g' /etc/suricata/suricata.yaml
     sed -i 's/request-body-limit: 100kb/request-body-limit: 0/g' /etc/suricata/suricata.yaml
     sed -i 's/response-body-limit: 100kb/response-body-limit: 0/g' /etc/suricata/suricata.yaml
+    # shellcheck disable=2016
     sed -i 's/EXTERNAL_NET: "!$HOME_NET"/EXTERNAL_NET: "ANY"/g' /etc/suricata/suricata.yaml
     sed -i 's|#pid-file: /var/run/suricata.pid|pid-file: /tmp/suricata.pid|g' /etc/suricata/suricata.yaml
     sed -i 's|#ja3-fingerprints: auto|ja3-fingerprints: yes|g' /etc/suricata/suricata.yaml
@@ -779,13 +784,14 @@ function install_yara() {
         unzip -o -q "$yara_version"
         #wget "https://github.com/VirusTotal/yara/archive/v$yara_version.zip" && unzip "v$yara_version.zip"
     fi
+    # shellcheck disable=SC2010
     directory=$(ls | grep "VirusTotal-yara-*")
     mkdir -p /tmp/yara_builded/DEBIAN
-    cd "$directory" || return
+    cd "$directory" || { echo "Не удалось перейти в директорию $directory"; exit 1; }
     ./bootstrap.sh
     ./configure --enable-cuckoo --enable-magic --enable-profiling
     make -j"$(getconf _NPROCESSORS_ONLN)"
-    yara_version_only=$(echo $yara_version|cut -c 2-)
+    yara_version_only=$(echo "$yara_version" | cut -c 2-)
     echo -e "Package: yara\nVersion: $yara_version_only\nArchitecture: $ARCH\nMaintainer: $MAINTAINER\nDescription: yara-$yara_version" > /tmp/yara_builded/DEBIAN/control
     make -j"$(nproc)" install DESTDIR=/tmp/yara_builded
     dpkg-deb --build --root-owner-group /tmp/yara_builded
@@ -938,11 +944,11 @@ function install_capa() {
         # problem with test files of dotnet as it goes over ssh insted of https --recurse-submodules
         git clone https://github.com/mandiant/capa.git
     fi
-    cd capa || return
+    cd capa || { echo "Не удалось перейти в директорию capa"; exit 1; } # || return
     git pull
     git submodule update --init rules
     /etc/poetry/bin/poetry --directory /opt/CAPEv2/ run pip install .
-    cd /opt/CAPEv2
+    cd /opt/CAPEv2 || return
     if [ -d /tmp/capa ]; then
         sudo rm -rf /tmp/capa
     fi
@@ -972,6 +978,7 @@ function dependencies() {
     # APT poetry is ultra outdated
     curl -sSL https://install.python-poetry.org | POETRY_HOME=/etc/poetry python3 -
     echo "PATH=$PATH:/etc/poetry/bin/" >> /etc/bash.bashrc
+    # shellcheck disable=SC1091
     source /etc/bash.bashrc
     poetry self add poetry-plugin-shell
 
@@ -1013,9 +1020,9 @@ function dependencies() {
     sudo -u postgres -H sh -c "psql -d \"${USER}\" -c \"ALTER DATABASE ${USER} OWNER TO ${USER};\""
 
     sudo apt-get install -y apparmor-utils
-    TCPDUMP_PATH=`which tcpdump`
-    aa-complain ${TCPDUMP_PATH}
-    aa-disable ${TCPDUMP_PATH}
+    TCPDUMP_PATH=$(which tcpdump)
+    aa-complain "${TCPDUMP_PATH}"
+    aa-disable "${TCPDUMP_PATH}"
 
     if id "${USER}" &>/dev/null; then
         echo "user ${USER} already exist"
@@ -1120,7 +1127,7 @@ EOF
         sudo rm -rf /tmp/passivedns
     fi
     git clone https://github.com/gamelinux/passivedns.git
-    cd passivedns/ || return
+    cd passivedns/ || { echo "Не удалось перейти в директорию passivedns/"; exit 1; }
     autoreconf --install
     ./configure
     make -j"$(getconf _NPROCESSORS_ONLN)"
@@ -1214,12 +1221,12 @@ curl_connect_timeout="15"
 curl_max_time="90"
 work_dir="/usr/unofficial-dbs"   #Top level working directory
 # Sub-directory names:
-ss_dir="$work_dir/ss-dbs"        # Sanesecurity sub-directory
-si_dir="$work_dir/si-dbs"        # SecuriteInfo sub-directory
-mbl_dir="$work_dir/mbl-dbs"      # MalwarePatrol sub-directory
-config_dir="$work_dir/configs"   # Script configs sub-directory
-gpg_dir="$work_dir/gpg-key"      # Sanesecurity GPG Key sub-directory
-add_dir="$work_dir/add-dbs"      # User defined databases sub-directory
+ss_dir="\$work_dir/ss-dbs"        # Sanesecurity sub-directory
+si_dir="\$work_dir/si-dbs"        # SecuriteInfo sub-directory
+mbl_dir="\$work_dir/mbl-dbs"      # MalwarePatrol sub-directory
+config_dir="\$work_dir/configs"   # Script configs sub-directory
+gpg_dir="\$work_dir/gpg-key"      # Sanesecurity GPG Key sub-directory
+add_dir="\$work_dir/add-dbs"      # User defined databases sub-directory
 # If you would like to make a backup copy of the current running database
 # file before updating, leave the following variable set to "yes" and a
 # backup copy of the file will be created in the production directory
@@ -1233,7 +1240,7 @@ curl_silence="no"      # Default is "no" to report curl statistics
 rsync_silence="no"     # Default is "no" to report rsync statistics
 gpg_silence="no"       # Default is "no" to report gpg signature status
 comment_silence="no"   # Default is "no" to report script comments
-# Log update information to '$log_file_path/$log_file_name'.
+# Log update information to '\$log_file_path/\$log_file_name'.
 enable_logging="yes"
 log_file_path="/var/log"
 log_file_name="clamav-unofficial-sigs.log"
@@ -1319,7 +1326,7 @@ function install_CAPE() {
     python3 utils/community.py -waf -cr
 
     # Configure direct internet connection
-    sudo echo "400 ${INTERNET_IFACE}" >> /etc/iproute2/rt_tables
+    echo "400 ${INTERNET_IFACE}" | sudo tee -a /etc/iproute2/rt_tables
 
 if [ ! -f /etc/sudoers.d/cape ]; then
     cat >> /etc/sudoers.d/cape << EOF
@@ -1402,18 +1409,18 @@ function install_volatility3() {
     sudo apt-get install -y unzip
     sudo -u ${USER} /etc/poetry/bin/poetry run pip3 install git+https://github.com/volatilityfoundation/volatility3
     vol_path=$(sudo -u ${USER} /etc/poetry/bin/poetry run python3 -c "import volatility3.plugins;print(volatility3.__file__.replace('__init__.py', 'symbols/'))")
-    cd $vol_path || return
+    cd "$vol_path" || return
     wget https://downloads.volatilityfoundation.org/volatility3/symbols/windows.zip -O windows.zip
     unzip -o windows.zip
     rm windows.zip
-    chown "${USER}:${USER}" $vol_path -R
+    chown "${USER}:${USER}" "$vol_path" -R
 }
 
 function install_mitmproxy() {
     echo "[+] Installing mitmproxy"
     sudo mkdir /opt/mitmproxy
     sudo chown ${USER}:${USER} /opt/mitmproxy
-    cd /opt/mitmproxy
+    cd /opt/mitmproxy || return
     mitmproxy_version=$(curl -s https://api.github.com/repos/mitmproxy/mitmproxy/releases/latest | grep '"tag_name":' | cut -d '"' -f 4 | sed 's/^v//')
     wget https://downloads.mitmproxy.org/"$mitmproxy_version"/mitmproxy-"$mitmproxy_version"-linux-x86_64.tar.gz -O mitmproxy.tar.gz
     tar xvzf mitmproxy.tar.gz
@@ -1440,12 +1447,12 @@ function install_guacamole() {
 
     guacamole_version=$(curl -s https://downloads.apache.org/guacamole/|grep DIR|tail -1|cut -d">" -f 3| cut -d"/" -f 1)
 
-    if [ ! -f "guacamole-server-"$guacamole_version".tar.gz" ] ; then
+    if [ ! -f "guacamole-server-$guacamole_version.tar.gz" ] ; then
         wget https://downloads.apache.org/guacamole/"$guacamole_version"/source/guacamole-server-"$guacamole_version".tar.gz
         wget https://downloads.apache.org/guacamole/"$guacamole_version"/source/guacamole-server-"$guacamole_version".tar.gz.asc
         tar xf guacamole-server-"$guacamole_version".tar.gz
     fi
-    cd guacamole-server-"$guacamole_version" || return
+    cd guacamole-server-"$guacamole_version" || { echo "Не удалось перейти в директорию guacamole-server-$guacamole_version"; exit 1; }
     CFLAGS=-Wno-error ./configure --with-systemd-dir=/etc/systemd/system/
     mkdir -p /tmp/guacamole-"${guacamole_version}"_builded/DEBIAN
     echo -e "Package: guacamole\nVersion: ${guacamole_version}\nArchitecture: $ARCH\nMaintainer: $MAINTAINER\nDescription: Guacamole ${guacamole_version}" > /tmp/guacamole-"${guacamole_version}"_builded/DEBIAN/control
@@ -1478,7 +1485,7 @@ function install_guacamole() {
     # Add www-data to CAPE group to access guac recordings
     sudo usermod www-data -G ${USER}
 
-    cd /opt/CAPEv2
+    cd /opt/CAPEv2 || return
     sudo -u ${USER} bash -c "export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring; ${poetry_path} install"
     cd ..
 
