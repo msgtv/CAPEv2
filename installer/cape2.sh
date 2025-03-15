@@ -639,7 +639,7 @@ function redsocks2() {
     echo "[+] Installing redsocks2"
     cd /tmp || return
     sudo apt-get install -y git libevent-dev libreadline-dev zlib1g-dev libncurses5-dev libssl1.0-dev libssl-dev
-    git clone https://github.com/semigodking/redsocks redsocks2 && cd redsocks2 || return
+    git clone --depth 1 https://github.com/semigodking/redsocks redsocks2 && cd redsocks2 || return
     DISABLE_SHADOWSOCKS=true make -j"$(nproc)" #ENABLE_STATIC=true
     sudo cp redsocks2 /usr/bin/
 }
@@ -761,7 +761,7 @@ function install_yara_x() {
     if [ -d yara-x ]; then
         sudo rm -rf yara-x
     fi
-    sudo -u ${USER} git clone https://github.com/VirusTotal/yara-x
+    sudo -u ${USER} git clone --depth 1 https://github.com/VirusTotal/yara-x
     cd yara-x || return
     sudo -u ${USER} bash -c 'source "$HOME/.cargo/env" ; cargo install --path cli'
     /etc/poetry/bin/poetry --directory /opt/CAPEv2/ run pip install yara-x
@@ -942,7 +942,7 @@ function install_capa() {
     cd /tmp || return
     if [ ! -d /tmp/capa ]; then
         # problem with test files of dotnet as it goes over ssh insted of https --recurse-submodules
-        git clone https://github.com/mandiant/capa.git
+        git clone --depth 1 https://github.com/mandiant/capa.git
     fi
     cd capa || { echo "Не удалось перейти в директорию capa"; exit 1; } # || return
     git pull
@@ -1126,7 +1126,7 @@ EOF
     if [ -d /tmp/passivedns ]; then
         sudo rm -rf /tmp/passivedns
     fi
-    git clone https://github.com/gamelinux/passivedns.git
+    git clone --depth 1 https://github.com/gamelinux/passivedns.git
     cd passivedns/ || { echo "Не удалось перейти в директорию passivedns/"; exit 1; }
     autoreconf --install
     ./configure
@@ -1280,7 +1280,7 @@ function install_CAPE() {
     cd /opt || return
     # if folder CAPEv2 dosn't exist, clone it
     if [ ! -d CAPEv2 ]; then
-        git clone https://github.com/kevoreilly/CAPEv2/
+        git clone --depth 1 https://github.com/kevoreilly/CAPEv2/
     fi
     chown ${USER}:${USER} -R /opt/CAPEv2/
     #chown -R root:${USER} /usr/var/malheur/
