@@ -59,6 +59,20 @@ DIE_VERSION="3.10"
 
 TOR_SOCKET_TIMEOUT="60"
 
+# Сохраняем текущие значения переменных HTTP_PROXY и HTTPS_PROXY
+ORIGINAL_HTTP_PROXY=$http_proxy
+ORIGINAL_HTTPS_PROXY=$https_proxy
+
+PROXY=""
+
+if [ -n "$PROXY" ]; then
+    export http_proxy="http://$PROXY"
+    export https_proxy="http://$PROXY"
+    echo "Proxy set to $PROXY"
+else
+    echo "PROXY is empty or not set."
+fi
+
 # if a config file is present, read it in
 # shellcheck disable=SC1091
 if [ -f "./cape-config.sh" ]; then
@@ -969,9 +983,10 @@ function dependencies() {
     sudo apt-get install -y python3-pip build-essential libssl-dev libssl3 python3-dev cmake nfs-common crudini
     sudo apt-get install -y innoextract msitools iptables psmisc jq sqlite3 tmux net-tools checkinstall graphviz python3-pydot git numactl python3 python3-dev python3-pip libjpeg-dev zlib1g-dev
     sudo apt-get install -y zpaq upx-ucl wget zip unzip lzip rar unrar unace-nonfree cabextract geoip-database libgeoip-dev libjpeg-dev mono-utils ssdeep libfuzzy-dev exiftool
-    sudo apt-get install -y uthash-dev libconfig-dev libarchive-dev libtool autoconf automake privoxy software-properties-common wkhtmltopdf xvfb xfonts-100dpi tcpdump libcap2-bin wireshark-common
+    sudo apt-get install -y uthash-dev libconfig-dev libarchive-dev libtool autoconf automake privoxy software-properties-common wkhtmltopdf xvfb xfonts-100dpi tcpdump libcap2-bin 
     sudo apt-get install -y python3-pil subversion uwsgi uwsgi-plugin-python3 python3-pyelftools git curl
     sudo apt-get install -y openvpn wireguard
+    sudo apt-get install -y wireshark-common
     # for bingraph
     sudo apt-get install -y libgraphviz-dev
 
@@ -1406,14 +1421,22 @@ function install_node_exporter() {
 
 function install_volatility3() {
     echo "[+] Installing volatility3"
+    cd "/opt/CAPEv2/" || return
+    
     sudo apt-get install -y unzip
+    
     sudo -u ${USER} /etc/poetry/bin/poetry run pip3 install git+https://github.com/volatilityfoundation/volatility3
     vol_path=$(sudo -u ${USER} /etc/poetry/bin/poetry run python3 -c "import volatility3.plugins;print(volatility3.__file__.replace('__init__.py', 'symbols/'))")
     cd "$vol_path" || return
-    wget https://downloads.volatilityfoundation.org/volatility3/symbols/windows.zip -O windows.zip
-    unzip -o windows.zip
-    rm windows.zip
+    echo "cd to $vol_path"
+    if [ ! -d "windows" ]; then
+        wget https://downloads.volatilityfoundation.org/volatility3/symbols/windows.zip -O windows.zip
+        unzip -o windows.zip
+        rm windows.zip
+    fi
     chown "${USER}:${USER}" "$vol_path" -R
+
+    cd || return
 }
 
 function install_mitmproxy() {
@@ -1673,5 +1696,18 @@ case "$COMMAND" in
 *)
     usage;;
 esac
+
+# Восстанавливаем или удаляем переменные, если они не были заданы изначально
+if [ -z "$ORIGINAL_HTTP_PROXY" ]; then
+    unset http_proxy
+else
+    export http_proxy=$ORIGINAL_HTTP_PROXY
+fi
+
+if [ -z "$ORIGINAL_HTTPS_PROXY" ]; then
+    unset https_proxy
+else
+    export https_proxy=$ORIGINAL_HTTPS_PROXY
+fi
 
 echo "[+] cape2.sh - Done"
