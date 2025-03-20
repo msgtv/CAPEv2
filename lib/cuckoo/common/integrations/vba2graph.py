@@ -8,6 +8,7 @@ import errno
 import logging
 import os
 import sys
+import traceback
 from io import StringIO
 from subprocess import Popen
 
@@ -218,7 +219,8 @@ lst_mal_case_insensetive = [
     "VIRTUAL",
     "VMWARE",
     "VBOX",
-    r'"[\\w-_\\/]+\.(?:EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)"',
+    # r'"[\\w-_\\/]+\.(?:EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)"',
+    r'"[\w\-_\/]+\.(?:EXE|PIF|GADGET|MSI|MSP|MSC|VBS|VBE|VB|JSE|JS|WSF|WSC|WSH|WS|BAT|CMD|DLL|SCR|HTA|CPL|CLASS|JAR|PS1XML|PS1|PS2XML|PS2|PSC1|PSC2|SCF|LNK|INF|REG)"',
     "FileSystemObject",
     "GetSpecialFolder",
     "PowerShell",
@@ -384,9 +386,11 @@ def vba2graph_func(file_path: str, id: str, sha256: str, on_demand: bool = False
     if HAVE_VBA2GRAPH and processing_conf.vba2graph.enabled and (not processing_conf.vba2graph.on_demand or on_demand):
         try:
             vba2graph_path = os.path.join(CUCKOO_ROOT, "storage", "analyses", id, "vba2graph")
+
             vba2graph_svg_path = os.path.join(vba2graph_path, f"{sha256}.svg")
+
             if path_exists(vba2graph_svg_path):
-                return
+               return
             if not path_exists(vba2graph_path):
                 path_mkdir(vba2graph_path)
             vba_code = vba2graph_from_vba_object(file_path)
@@ -395,7 +399,7 @@ def vba2graph_func(file_path: str, id: str, sha256: str, on_demand: bool = False
         except ModuleNotFoundError as e:
             log.error("Missed  vba2graph dependency: %s", str(e))
         except Exception as e:
-            log.error("Inside vba2graph_func: %s", str(e))
+            log.error(f"{traceback.format_exc()}\nInside vba2graph_func: {e}")
 
 
 def vba2graph_from_vba_object(filepath):
@@ -403,7 +407,6 @@ def vba2graph_from_vba_object(filepath):
     Args:
         filepath (string): path to file
     """
-    log.info("Extracting macros from file")
     if HAVE_OLETOOLS:
         try:
             vba = VBA_Parser(filepath)
@@ -413,6 +416,7 @@ def vba2graph_from_vba_object(filepath):
         except Exception as e:
             log.error(e)
             return False
+
     full_vba_code = ""
     for subfilename, stream_path, vba_filename, vba_code in vba.extract_macros():
         full_vba_code += "VBA MACRO %s \n" % vba_filename
@@ -422,6 +426,7 @@ def vba2graph_from_vba_object(filepath):
             vba_code = vba_code.decode("utf8", errors="replace")
         full_vba_code += vba_code
     vba.close()
+
     if full_vba_code:
         input_vba_content = handle_olevba_input(full_vba_code)
         return input_vba_content
@@ -473,7 +478,6 @@ def vba2graph_gen(input_vba_content, output_folder="output", input_file_name="vb
     # ****************************************************************************
     # *                               Process Input                              *
     # ****************************************************************************
-
     vba_content_lines = vba_seperate_lines(input_vba_content)
     vba_content_lines_no_whitespace = vba_clean_whitespace(vba_content_lines)
     vba_content_lines_no_metadata = vba_clean_metadata(vba_content_lines_no_whitespace)
@@ -841,7 +845,7 @@ def vba_extract_properties(vba_content_lines):
 
 
 def create_call_graph(vba_func_dict):
-    """Creates directed graph object (DG) from VBA functions dicitonary
+    """Creates directed graph object (DG) from VBA functions dictionary
 
     Args:
         vba_func_dict (dict[func_name]=func_code): Functions dictionary
@@ -856,7 +860,7 @@ def create_call_graph(vba_func_dict):
     for func_name in vba_func_dict:
         func_code = vba_func_dict[func_name]
         # split function code into tokens
-        func_code_tokens = list(filter(None, re.split(r'["(, \\-!?:\\r\\n)&=.><]+', func_code)))
+        func_code_tokens = list(filter(None, re.split(r'["(, \\!?:\\r\\n)&=.><\-]+', func_code)))
         # inside each function's code, we are looking for a function name
         for func_name1 in vba_func_dict:
             orig_func_name = func_name1
@@ -1088,13 +1092,13 @@ def fix_dot_output(str_dot):
     new_str_dot = ""
     # iterate over all the dot file lines and change function names which
     # are reserved DOT keywords
-    for cur_line in str_dot_lines:
+    for i, cur_line in enumerate(str_dot_lines):
         new_str_dot_line = cur_line
 
         pass_line = False
         # check if we are in the first disgraph declaration line
         # example: strict digraph  {
-        if "digraph  " in cur_line:
+        if "digraph " in cur_line:
             pass_line = True
 
         # check if we are in a graph declaration line
