@@ -1295,7 +1295,8 @@ function install_CAPE() {
     cd /opt || return
     # if folder CAPEv2 dosn't exist, clone it
     if [ ! -d CAPEv2 ]; then
-        git clone --depth 1 https://github.com/kevoreilly/CAPEv2/
+        # git clone --depth 1 https://github.com/kevoreilly/CAPEv2/
+        git clone --depth 1 https://github.com/msgtv/CAPEv2.git
     fi
     chown ${USER}:${USER} -R /opt/CAPEv2/
     #chown -R root:${USER} /usr/var/malheur/
