@@ -133,7 +133,7 @@ def pids_from_image_names(suffixlist):
         if not n:
             # log.debug("psapi.GetProcessImageFileNameA failed for pid: %d", pid)
             continue
-        image_name_pystr = image_name.value.decode().lower()
+        image_name_pystr = image_name.value.decode(errors='ignore').lower()
         # e.g., image name: "\device\harddiskvolume4\windows\system32\services.exe"
         if image_name_pystr.endswith(suffixlist):
             retpids.append(pid)
