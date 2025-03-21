@@ -342,3 +342,12 @@ sigs_path = data/flare-signatures
 
 [html_scraper]
 enabled = no
+
+[flare_capa]
+enabled = no
+on_demand = no
+
+[floss]
+enabled = no
+on_demand = no
+
