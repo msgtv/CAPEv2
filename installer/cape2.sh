@@ -65,10 +65,24 @@ ORIGINAL_HTTPS_PROXY=$https_proxy
 
 PROXY=""
 
+APT_PROXY_FILE="/etc/apt/apt.conf.d/90proxy"
+APT_BACKUP_FILE="/etc/apt/apt.conf.d/90proxy.backup"
+
 if [ -n "$PROXY" ]; then
     export http_proxy="http://$PROXY"
     export https_proxy="http://$PROXY"
     echo "Proxy set to $PROXY"
+
+    # TODO1: сохранить (сделать бэкап) файл с текущими настройками прокси apt, если существует
+    if [ -f "$APT_PROXY_FILE" ]; then
+        cp "$APT_PROXY_FILE" "$APT_BACKUP_FILE"
+        echo "Backup of APT proxy settings created"
+    fi
+
+    # TODO2: записать новый файл с настройками прокси apt
+    echo "Acquire::http::Proxy \"http://$PROXY\";" > "$APT_PROXY_FILE"
+    echo "Acquire::https::Proxy \"http://$PROXY\";" >> "$APT_PROXY_FILE"
+    echo "APT proxy settings updated"
 else
     echo "PROXY is empty or not set."
 fi
@@ -1698,17 +1712,30 @@ case "$COMMAND" in
     usage;;
 esac
 
-# Восстанавливаем или удаляем переменные, если они не были заданы изначально
-if [ -z "$ORIGINAL_HTTP_PROXY" ]; then
-    unset http_proxy
-else
-    export http_proxy=$ORIGINAL_HTTP_PROXY
-fi
+if [ -n "$PROXY" ]; then
+    # Восстанавливаем или удаляем переменные, если они не были заданы изначально
+    if [ -z "$ORIGINAL_HTTP_PROXY" ]; then
+        unset http_proxy
+    else
+        export http_proxy=$ORIGINAL_HTTP_PROXY
+    fi
 
-if [ -z "$ORIGINAL_HTTPS_PROXY" ]; then
-    unset https_proxy
-else
-    export https_proxy=$ORIGINAL_HTTPS_PROXY
+    if [ -z "$ORIGINAL_HTTPS_PROXY" ]; then
+        unset https_proxy
+    else
+        export https_proxy=$ORIGINAL_HTTPS_PROXY
+    fi
+
+    # если были настройки прокси apt до - перезаписать настройки прокси файлом-бэкапа, иначе удалить файл
+    if [ -f "$APT_BACKUP_FILE" ]; then
+        mv "$APT_BACKUP_FILE" "$APT_PROXY_FILE"
+        echo "Restored original APT proxy settings from backup"
+    else
+        if [ -f "$APT_PROXY_FILE" ]; then
+            rm "$APT_PROXY_FILE"
+            echo "Removed temporary APT proxy settings"
+        fi
+    fi
 fi
 
 echo "[+] cape2.sh - Done"
