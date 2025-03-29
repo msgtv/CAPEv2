@@ -224,6 +224,3 @@ enabled = no
 
 [browserext]
 enabled = no
-
-[flare_capa_summary]
-enabled = no
